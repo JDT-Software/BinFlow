@@ -36,12 +36,9 @@ builder.Services.Configure<Microsoft.AspNetCore.Components.Server.CircuitOptions
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // Accept all (Render supplies known proxy); clear defaults
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });
-
-var app = builder.Build();
 
 // Data Protection key persistence (prevents antiforgery token invalidation on restarts)
 try
@@ -56,6 +53,8 @@ catch (Exception ex)
 {
     Console.WriteLine($"⚠️ DataProtection configuration failed: {ex.Message}");
 }
+
+var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
