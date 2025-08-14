@@ -1,0 +1,743 @@
+@page "/dashboard"
+@using ProductionTracker.Models
+@using ProductionTracker.Services
+@inject IProductionService ProductionService
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Bin Flow Dashboard</PageTitle>
+
+    <style>
+    .top-row {
+        background-color: var(--dominant-color);
+    }
+    /* Dashboard Specific Styles */
+    :root {
+        --dominant-color: #D8C99B;
+        --secondary-color: #273E47;
+        --accent-color: #D8973C;
+    }
+    
+    .production-dashboard-page {
+        background-color: var(--dominant-color);
+        min-height: 100vh;
+    }
+    
+    .hero-gradient {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1a2b33 100%);
+    }
+    
+    .card-secondary {
+        background-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .card-accent {
+        background-color: var(--accent-color);
+        color: white;
+    }
+    
+    .btn-accent {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+        color: white;
+    }
+    
+    .btn-accent:hover {
+        background-color: #c07e2a;
+        border-color: #c07e2a;
+        color: white;
+    }
+    
+    .btn-accent:focus {
+        box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--accent-color);
+    }
+    
+    .stats-card-1 {
+        background: linear-gradient(135deg, var(--accent-color) 0%, #e6a54a 100%);
+    }
+    
+    .stats-card-2 {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #334b56 100%);
+    }
+    
+    .stats-card-3 {
+        background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    }
+    
+    .stats-card-4 {
+        background: linear-gradient(135deg, #2c5530 0%, #3e7b3e 100%);
+    }
+    
+    .icon-lg {
+        font-size: 2.5rem;
+    }
+    
+    .icon-xl {
+        font-size: 4rem;
+    }
+    
+    .progress-accent .progress-bar {
+        background-color: var(--accent-color);
+    }
+    
+    .badge-accent {
+        background-color: var(--accent-color);
+        color: white;
+    }
+    
+    .timeline .timeline-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    
+    @@media (max-width: 768px) {
+        .icon-xl {
+            font-size: 3rem;
+        }
+        
+        .icon-lg {
+            font-size: 2rem;
+        }
+        
+        .display-5 {
+            font-size: 2rem;
+        }
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+    }
+</style>
+
+<div class="production-dashboard-page">
+<div class="container-fluid mt-4">
+    <!-- Dashboard Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow hero-gradient text-white">
+                <div class="card-body p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <h1 class="display-5 fw-bold mb-2">
+                                <i class="bi bi-graph-up icon-lg me-3"></i>Bin Flow Dashboard
+                            </h1>
+                            <p class="lead mb-0">Real-time analytics and performance insights</p>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="d-flex flex-column align-items-md-end">
+                                <h3 class="mb-1">@DateTime.Now.ToString("HH:mm:ss")</h3>
+                                <p class="mb-2">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</p>
+                                <button class="btn btn-light btn-sm" @onclick="RefreshDashboard">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Refresh Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" style="width: 3rem; height: 3rem; color: var(--accent-color);" role="status">
+                <span class="visually-hidden">Loading dashboard...</span>
+            </div>
+            <h4 class="mt-3" style="color: var(--secondary-color);">Loading Production Data...</h4>
+        </div>
+    }
+    else if (allReports.Any())
+    {
+        <!-- Key Performance Indicators -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card h-100 border-0 shadow stats-card-1 text-white">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-xl mb-3">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">@totalBinsThisWeek.ToString("N0")</h2>
+                        <p class="mb-2">Total Bins This Week</p>
+                        <small class="opacity-75">
+                            <i class="bi bi-@(GetPercentageChange(totalBinsThisWeek, totalBinsLastWeek) >= 0 ? "graph-up" : "graph-down") me-1"></i>
+                            @Math.Abs(GetPercentageChange(totalBinsThisWeek, totalBinsLastWeek)).ToString("N1")% vs last week
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card h-100 border-0 shadow stats-card-2 text-white">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-xl mb-3">
+                            <i class="bi bi-speedometer2"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">@avgWeightThisWeek.ToString("N0")</h2>
+                        <p class="mb-2">Avg Weight (kg)</p>
+                        <small class="opacity-75">
+                            Target: 400kg | Variance: @((avgWeightThisWeek - 400).ToString("+#;-#;0"))kg
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card h-100 border-0 shadow stats-card-3 text-white">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-xl mb-3">
+                            <i class="bi bi-stopwatch"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">@totalDowntimeThisWeek</h2>
+                        <p class="mb-2">Downtime (min)</p>
+                        <small class="opacity-75">
+                            <i class="bi bi-@(GetPercentageChange(totalDowntimeLastWeek, totalDowntimeThisWeek) >= 0 ? "check-circle" : "exclamation-triangle") me-1"></i>
+                            @Math.Abs(GetPercentageChange(totalDowntimeLastWeek, totalDowntimeThisWeek)).ToString("N1")% vs last week
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card h-100 border-0 shadow stats-card-4 text-white">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-xl mb-3">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">@avgBinsPerHourThisWeek.ToString("N1")</h2>
+                        <p class="mb-2">Avg Bins/Hour</p>
+                        <small class="opacity-75">
+                            Target: 65+ | <i class="bi bi-@(avgBinsPerHourThisWeek >= 65 ? "check-circle" : "exclamation-triangle") me-1"></i>@(avgBinsPerHourThisWeek >= 65 ? "On Target" : "Below Target")
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Daily Production Trend -->
+            <div class="col-12 mb-4">
+                <div class="card shadow h-100 card-secondary">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-graph-up me-2"></i>Daily Production Trend by Shift (Last 7 Days)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach (var dayData in last7DaysData.OrderBy(d => d.Date))
+                            {
+                                <div class="col-sm mb-3">
+                                    <div class="text-center">
+                                        <!-- Day Header -->
+                                        <div class="mb-3">
+                                            <strong class="text-white">@dayData.Date.ToString("ddd")</strong><br>
+                                            <small class="text-light opacity-75">@dayData.Date.ToString("dd/MM")</small>
+                                        </div>
+                                        
+                                        <!-- Day Shift Chart -->
+                                        <div class="mb-2">
+                                            <div class="d-flex align-items-center justify-content-center mb-1">
+                                                <i class="bi bi-sun text-warning me-1" style="font-size: 0.8rem;"></i>
+                                                <small class="text-light">Day</small>
+                                            </div>
+                                            <div class="progress mb-1" style="height: 60px; writing-mode: bt-lr; background-color: rgba(255,255,255,0.1);">
+                                                <div class="progress-bar" 
+                                                     style="width: 100%; height: @(Math.Min(100, (dayData.DayShiftBins / 80.0) * 100))%; background-color: #ffc107;"
+                                                     title="@dayData.DayShiftBins bins (Day Shift)"></div>
+                                            </div>
+                                            <div class="fw-bold text-warning" style="font-size: 0.9rem;">@dayData.DayShiftBins</div>
+                                            <small class="text-light opacity-75 d-block" style="font-size: 0.75rem;">@dayData.DayShiftBinsPerHour.ToString("N1")/hr</small>
+                                        </div>
+                                        
+                                        <!-- Night Shift Chart -->
+                                        <div class="mb-2">
+                                            <div class="d-flex align-items-center justify-content-center mb-1">
+                                                <i class="bi bi-moon text-info me-1" style="font-size: 0.8rem;"></i>
+                                                <small class="text-light">Night</small>
+                                            </div>
+                                            <div class="progress mb-1" style="height: 60px; writing-mode: bt-lr; background-color: rgba(255,255,255,0.1);">
+                                                <div class="progress-bar" 
+                                                     style="width: 100%; height: @(Math.Min(100, (dayData.NightShiftBins / 80.0) * 100))%; background-color: #17a2b8;"
+                                                     title="@dayData.NightShiftBins bins (Night Shift)"></div>
+                                            </div>
+                                            <div class="fw-bold text-info" style="font-size: 0.9rem;">@dayData.NightShiftBins</div>
+                                            <small class="text-light opacity-75 d-block" style="font-size: 0.75rem;">@dayData.NightShiftBinsPerHour.ToString("N1")/hr</small>
+                                        </div>
+                                        
+                                        <!-- Total for the day -->
+                                        <div class="mt-2 pt-2 border-top border-secondary">
+                                            <div class="fw-bold text-success" style="font-size: 0.9rem;">@dayData.TotalBins</div>
+                                            <small class="text-light opacity-75" style="font-size: 0.75rem;">total bins</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Analytics -->
+        <div class="row mb-4">
+            <!-- Line Manager Performance -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow card-secondary">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people me-2"></i>Line Manager Performance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-dark">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-person me-1"></i>Manager</th>
+                                        <th class="text-center"><i class="bi bi-calendar3 me-1"></i>Shifts</th>
+                                        <th class="text-center"><i class="bi bi-box me-1"></i>Avg Bins</th>
+                                        <th class="text-center"><i class="bi bi-speedometer2 me-1"></i>Bins/Hour</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var manager in managerStats.OrderByDescending(m => m.AverageBinsPerHour))
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-white">@manager.LineManager</td>
+                                            <td class="text-center text-light">@manager.ShiftCount</td>
+                                            <td class="text-center text-light">@manager.AverageBins.ToString("N0")</td>
+                                            <td class="text-center">
+                                                @{
+                                                    var badgeClass = manager.AverageBinsPerHour >= 65 ? "bg-success" : 
+                                                                   manager.AverageBinsPerHour >= 50 ? "bg-warning text-dark" : "bg-danger";
+                                                }
+                                                <span class="badge @badgeClass">@manager.AverageBinsPerHour.ToString("N1")</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shift Type Analysis -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow card-secondary">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock me-2"></i>Shift Type Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @foreach (var shiftType in shiftStats.OrderByDescending(s => s.AverageBinsPerHour))
+                        {
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0 text-white">
+                                        <i class="bi bi-@(shiftType.ShiftType == "Night" ? "moon" : shiftType.ShiftType == "Day" ? "sun" : "sunrise") me-2"></i>
+                                        @shiftType.ShiftType Shift
+                                    </h6>
+                                    <span class="badge badge-accent">@shiftType.ShiftCount shifts</span>
+                                </div>
+                                
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <div class="fw-bold text-success">@shiftType.AverageBins.ToString("N0")</div>
+                                        <small class="text-light opacity-75">Avg Bins</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="fw-bold text-info">@shiftType.AverageWeight.ToString("N0")</div>
+                                        <small class="text-light opacity-75">Avg Weight</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="fw-bold text-warning">@shiftType.AverageBinsPerHour.ToString("N1")</div>
+                                        <small class="text-light opacity-75">Bins/Hour</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="progress mt-2" style="height: 6px; background-color: rgba(255,255,255,0.1);">
+                                    <div class="progress-bar bg-success" style="width: @(Math.Min(100, (shiftType.AverageBinsPerHour / 65.0) * 100))%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Alerts -->
+        <div class="row">
+            <div class="col-lg-8 mb-4">
+                <div class="card shadow card-secondary">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-activity me-2"></i>Recent Activity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            @foreach (var report in allReports.OrderByDescending(r => r.CreatedAt).Take(5))
+                            {
+                                <div class="d-flex mb-3">
+                                    <div class="flex-shrink-0">
+                                        @{
+                                            var binsPerHour = CalculateBinsPerHour(report);
+                                            var iconClass = binsPerHour >= 65 ? "bg-success" : binsPerHour >= 50 ? "bg-warning" : "bg-danger";
+                                            var icon = binsPerHour >= 65 ? "check-circle" : binsPerHour >= 50 ? "exclamation-triangle" : "x-circle";
+                                        }
+                                        <div class="timeline-icon @iconClass text-white">
+                                            <i class="bi bi-@icon"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="fw-bold text-white">@report.LineManager completed @report.Shift shift</div>
+                                        <div class="text-light opacity-75 small">
+                                            @report.Date.ToString("dd/MM/yyyy") • 
+                                            @report.TotalTipped bins • 
+                                            @binsPerHour.ToString("N1") bins/hour
+                                            @if (report.TotalDowntime > 0)
+                                            {
+                                                <span class="text-warning">• @report.TotalDowntime min downtime</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="text-light opacity-75 small">
+                                        @GetTimeAgo(report.CreatedAt)
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow card-secondary">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-exclamation-triangle me-2"></i>Alerts & Insights
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var alerts = GetAlerts();
+                        }
+                        @if (alerts.Any())
+                        {
+                            @foreach (var alert in alerts)
+                            {
+                                <div class="alert alert-@alert.Type alert-sm">
+                                    <strong><i class="bi bi-@alert.Icon me-2"></i>@alert.Title</strong><br>
+                                    <small>@alert.Message</small>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="alert alert-success">
+                                <strong><i class="bi bi-check-circle me-2"></i>All Good!</strong><br>
+                                <small>No alerts at this time. Production is running smoothly.</small>
+                            </div>
+                        }
+
+                        <!-- Quick Stats -->
+                        <div class="mt-4">
+                            <h6 class="fw-bold text-white">
+                                <i class="bi bi-graph-up me-2"></i>Quick Stats
+                            </h6>
+                            <div class="row text-center">
+                                <div class="col-6 mb-2">
+                                    <div class="fw-bold text-white">@allReports.Count</div>
+                                    <small class="text-light opacity-75">Total Reports</small>
+                                </div>
+                                <div class="col-6 mb-2">
+                                    <div class="fw-bold text-white">@allReports.Sum(r => r.BinTippings.Count)</div>
+                                    <small class="text-light opacity-75">Total Entries</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="fw-bold text-white">@(allReports.Any() ? allReports.Min(r => r.Date).ToString("dd/MM") : "N/A")</div>
+                                    <small class="text-light opacity-75">First Report</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="fw-bold text-white">@(allReports.Any() ? allReports.Max(r => r.Date).ToString("dd/MM") : "N/A")</div>
+                                    <small class="text-light opacity-75">Latest Report</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- No Data State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow text-center py-5 card-secondary">
+                    <div class="card-body">
+                        <div class="icon-xl text-light opacity-50 mb-4">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h3 class="text-white mb-3">No Production Data Available</h3>
+                        <p class="text-light opacity-75 mb-4">Start by entering shift data to see comprehensive analytics and insights here.</p>
+                        <a href="/hourly-entry" class="btn btn-accent btn-lg me-3">
+                            <i class="bi bi-clock me-2"></i>Enter Hourly Data
+                        </a>
+                        <a href="/reports" class="btn btn-outline-light btn-lg">
+                            <i class="bi bi-clipboard-data me-2"></i>View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+</div>
+
+@code {
+    private List<ShiftReport> allReports = new();
+    private bool isLoading = true;
+
+    // KPI Data
+    private int totalBinsThisWeek = 0;
+    private int totalBinsLastWeek = 0;
+    private double avgWeightThisWeek = 0;
+    private int totalDowntimeThisWeek = 0;
+    private int totalDowntimeLastWeek = 0;
+    private double avgBinsPerHourThisWeek = 0;
+
+    // Chart Data
+    private List<DayData> last7DaysData = new();
+    private List<ManagerStats> managerStats = new();
+    private List<ShiftStats> shiftStats = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        try
+        {
+            allReports = await ProductionService.GetAllShiftReportsAsync();
+            CalculateKPIs();
+            CalculateChartData();
+            CalculateManagerStats();
+            CalculateShiftStats();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshDashboard()
+    {
+        await LoadDashboardData();
+    }
+
+    private void CalculateKPIs()
+    {
+        var thisWeekStart = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek);
+        var lastWeekStart = thisWeekStart.AddDays(-7);
+
+        var thisWeekReports = allReports.Where(r => r.Date >= thisWeekStart).ToList();
+        var lastWeekReports = allReports.Where(r => r.Date >= lastWeekStart && r.Date < thisWeekStart).ToList();
+
+        totalBinsThisWeek = thisWeekReports.Sum(r => r.TotalTipped);
+        totalBinsLastWeek = lastWeekReports.Sum(r => r.TotalTipped);
+        avgWeightThisWeek = thisWeekReports.Any() ? thisWeekReports.Average(r => r.AverageWeight) : 0;
+        totalDowntimeThisWeek = thisWeekReports.Sum(r => r.TotalDowntime);
+        totalDowntimeLastWeek = lastWeekReports.Sum(r => r.TotalDowntime);
+        avgBinsPerHourThisWeek = thisWeekReports.Any() ? thisWeekReports.Average(r => CalculateBinsPerHour(r)) : 0;
+    }
+
+    private void CalculateChartData()
+    {
+        last7DaysData = new List<DayData>();
+        for (int i = 6; i >= 0; i--)
+        {
+            var date = DateTime.Today.AddDays(-i);
+            var dayReports = allReports.Where(r => r.Date.Date == date).ToList();
+            
+            var dayShiftReports = dayReports.Where(r => r.Shift.Equals("Day", StringComparison.OrdinalIgnoreCase)).ToList();
+            var nightShiftReports = dayReports.Where(r => r.Shift.Equals("Night", StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            last7DaysData.Add(new DayData
+            {
+                Date = date,
+                TotalBins = dayReports.Sum(r => r.TotalTipped),
+                AverageBinsPerHour = dayReports.Any() ? dayReports.Average(r => CalculateBinsPerHour(r)) : 0,
+                DayShiftBins = dayShiftReports.Sum(r => r.TotalTipped),
+                DayShiftBinsPerHour = dayShiftReports.Any() ? dayShiftReports.Average(r => CalculateBinsPerHour(r)) : 0,
+                NightShiftBins = nightShiftReports.Sum(r => r.TotalTipped),
+                NightShiftBinsPerHour = nightShiftReports.Any() ? nightShiftReports.Average(r => CalculateBinsPerHour(r)) : 0
+            });
+        }
+    }
+
+    private void CalculateManagerStats()
+    {
+        managerStats = allReports
+            .GroupBy(r => r.LineManager)
+            .Select(g => new ManagerStats
+            {
+                LineManager = g.Key,
+                ShiftCount = g.Count(),
+                AverageBins = g.Average(r => r.TotalTipped),
+                AverageBinsPerHour = g.Average(r => CalculateBinsPerHour(r))
+            })
+            .ToList();
+    }
+
+    private void CalculateShiftStats()
+    {
+        shiftStats = allReports
+            .GroupBy(r => r.Shift)
+            .Select(g => new ShiftStats
+            {
+                ShiftType = g.Key,
+                ShiftCount = g.Count(),
+                AverageBins = g.Average(r => r.TotalTipped),
+                AverageWeight = g.Average(r => r.AverageWeight),
+                AverageBinsPerHour = g.Average(r => CalculateBinsPerHour(r))
+            })
+            .ToList();
+    }
+
+    private double CalculateBinsPerHour(ShiftReport report)
+    {
+        var workingEntries = report.BinTippings?.Where(x => !x.IsLunchBreak).Count() ?? 0;
+        if (workingEntries <= 0) return 0;
+        return (double)report.TotalTipped / workingEntries;
+    }
+
+    private double GetPercentageChange(double current, double previous)
+    {
+        if (previous == 0) return 0;
+        return ((current - previous) / previous) * 100;
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var timeSpan = DateTime.Now - dateTime;
+        if (timeSpan.TotalDays >= 1)
+            return $"{(int)timeSpan.TotalDays} days ago";
+        if (timeSpan.TotalHours >= 1)
+            return $"{(int)timeSpan.TotalHours} hours ago";
+        if (timeSpan.TotalMinutes >= 1)
+            return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        return "Just now";
+    }
+
+    private List<Alert> GetAlerts()
+    {
+        var alerts = new List<Alert>();
+        
+        // Low bins per hour alert
+        var lowPerformanceReports = allReports.Where(r => CalculateBinsPerHour(r) < 50).Count();
+        if (lowPerformanceReports > 0)
+        {
+            alerts.Add(new Alert
+            {
+                Type = "warning",
+                Icon = "exclamation-triangle",
+                Title = "Low Performance",
+                Message = $"{lowPerformanceReports} shifts below 50 bins/hour"
+            });
+        }
+
+        // High downtime alert
+        var highDowntimeReports = allReports.Where(r => r.TotalDowntime > 60).Count();
+        if (highDowntimeReports > 0)
+        {
+            alerts.Add(new Alert
+            {
+                Type = "danger",
+                Icon = "alarm",
+                Title = "High Downtime",
+                Message = $"{highDowntimeReports} shifts with >60min downtime"
+            });
+        }
+
+        // Weight variance alert
+        var avgWeight = allReports.Any() ? allReports.Average(r => r.AverageWeight) : 0;
+        if (Math.Abs(avgWeight - 400) > 50)
+        {
+            alerts.Add(new Alert
+            {
+                Type = "info",
+                Icon = "info-circle",
+                Title = "Weight Variance",
+                Message = $"Average weight {avgWeight:N0}kg vs target 400kg"
+            });
+        }
+
+        // Below target performance alert
+        var belowTargetReports = allReports.Where(r => CalculateBinsPerHour(r) < 65).Count();
+        if (belowTargetReports > 0)
+        {
+            alerts.Add(new Alert
+            {
+                Type = "info",
+                Icon = "target",
+                Title = "Below Target",
+                Message = $"{belowTargetReports} shifts below 65 bins/hour target"
+            });
+        }
+
+        return alerts;
+    }
+
+    // Helper classes
+    public class DayData
+    {
+        public DateTime Date { get; set; }
+        public int TotalBins { get; set; }
+        public double AverageBinsPerHour { get; set; }
+        public int DayShiftBins { get; set; }
+        public double DayShiftBinsPerHour { get; set; }
+        public int NightShiftBins { get; set; }
+        public double NightShiftBinsPerHour { get; set; }
+    }
+
+    public class ManagerStats
+    {
+        public string LineManager { get; set; } = "";
+        public int ShiftCount { get; set; }
+        public double AverageBins { get; set; }
+        public double AverageBinsPerHour { get; set; }
+    }
+
+    public class ShiftStats
+    {
+        public string ShiftType { get; set; } = "";
+        public int ShiftCount { get; set; }
+        public double AverageBins { get; set; }
+        public double AverageWeight { get; set; }
+        public double AverageBinsPerHour { get; set; }
+    }
+
+    public class Alert
+    {
+        public string Type { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
+}

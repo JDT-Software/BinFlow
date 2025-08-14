@@ -1,0 +1,51 @@
+    .top-row {
+        background-color: var(--dominant-color);
+    }
+    :root {
+/* Only keep Home-specific styles here. Move global styles and variables to app.css */
+    
+    .card-secondary {
+        background-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .card-accent {
+        background-color: var(--accent-color);
+        color: white;
+    }
+    
+    .btn-accent {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+        color: white;
+    }
+    
+    .btn-accent:hover {
+        background-color: #c07e2a;
+        border-color: #c07e2a;
+        color: white;
+    }
+    
+    .stats-card-1 {
+        background: linear-gradient(135deg, var(--accent-color) 0%, #e6a54a 100%);
+    }
+    
+    .stats-card-2 {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #334b56 100%);
+    }
+    
+    .stats-card-3 {
+        background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    }
+    
+    .stats-card-4 {
+        background: linear-gradient(135deg, #2c5530 0%, #3e7b3e 100%);
+    }
+    
+    .icon-lg {
+        font-size: 2.5rem;
+    }
+    
+    .icon-xl {
+        font-size: 4rem;
+    }

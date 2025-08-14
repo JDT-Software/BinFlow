@@ -1,0 +1,36 @@
+    body, .main-content, .container-fluid {
+        background-color: var(--dominant-color) !important;
+    }
+    .top-row {
+        background-color: var(--dominant-color);
+    }
+@page "/mongotest"
+@using ProductionTracker.Services
+@inject IProductionService ProductionService
+
+<h1>MongoDB Test</h1>
+
+<button class="btn btn-primary" @onclick="TestConnection">Test MongoDB Connection</button>
+
+<p>@message</p>
+
+@code {
+    private string message = "";
+
+    private async Task TestConnection()
+    {
+        try
+        {
+            message = "Testing connection...";
+            StateHasChanged();
+            
+            var reports = await ProductionService.GetAllShiftReportsAsync();
+            message = $"✅ Success! Found {reports.Count} reports in database.";
+        }
+        catch (Exception ex)
+        {
+            message = $"❌ Error: {ex.Message}";
+        }
+        StateHasChanged();
+    }
+}

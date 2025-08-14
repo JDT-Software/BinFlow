@@ -1,0 +1,121 @@
+
+    body, .main-content, .container-fluid {
+        background-color: var(--dominant-color) !important;
+    }
+    .top-row {
+        background-color: var(--dominant-color);
+    }
+    /* Reports Page Specific Styles */
+    :root {
+        --dominant-color: #D8C99B;
+        --secondary-color: #273E47;
+        --accent-color: #D8973C;
+    }
+    
+    .production-reports-page {
+        background-color: var(--dominant-color);
+        min-height: 100vh;
+    }
+    
+    .hero-gradient {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #1a2b33 100%);
+    }
+    
+    .card-secondary {
+        background-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .card-accent {
+        background-color: var(--accent-color);
+        color: white;
+    }
+    
+    .btn-accent {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+        color: white;
+    }
+    
+    .btn-accent:hover {
+        background-color: #c07e2a;
+        border-color: #c07e2a;
+        color: white;
+    }
+    
+    .btn-accent:focus {
+        box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--accent-color);
+    }
+    
+    .badge-accent {
+        background-color: #0a2a43; /* navy */
+        color: #ffffff;
+    }
+    
+    .stats-card-1 {
+        background: linear-gradient(135deg, var(--accent-color) 0%, #e6a54a 100%);
+    }
+    
+    .stats-card-2 {
+        background: linear-gradient(135deg, var(--secondary-color) 0%, #334b56 100%);
+    }
+    
+    .stats-card-3 {
+        background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+    }
+    
+    .stats-card-4 {
+        background: linear-gradient(135deg, #2c5530 0%, #3e7b3e 100%);
+    }
+    
+    .icon-lg {
+        font-size: 2.5rem;
+    }
+    
+    .icon-xl {
+        font-size: 4rem;
+    }
+    
+    .icon-md {
+        font-size: 1.5rem;
+    }
+    
+    .form-control:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 0.2rem rgba(216, 151, 60, 0.25);
+    }
+    
+    .form-select:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 0.2rem rgba(216, 151, 60, 0.25);
+    }
+    
+    .modal-content {
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    .modal-header {
+        background-color: var(--secondary-color);
+        color: white;
+        border-bottom: none;
+    }
+    
+    .modal-header .btn-close {
+        filter: invert(1);
+    }
+    
+    @media (max-width: 768px) {
+        .icon-lg {
+            font-size: 2rem;
+        }
+        
+        .icon-md {
+            font-size: 1.2rem;
+        }
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+        transition: transform 0.2s ease-in-out;
+    }

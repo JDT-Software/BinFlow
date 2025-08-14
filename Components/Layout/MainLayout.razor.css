@@ -1,0 +1,415 @@
+/* Modern Production Tracker Layout Styles */
+:root {
+    --dominant-color: #D8C99B;
+    --secondary-color: #273E47;
+    --accent-color: #D8973C;
+    --sidebar-width: 280px;
+    --header-height: 60px;
+}
+
+/* Override default body styling */
+body {
+    background-color: var(--dominant-color) !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: var(--dominant-color);
+}
+
+main {
+    flex: 1;
+    background-color: var(--dominant-color);
+}
+
+/* Modern Sidebar Styling */
+.sidebar {
+    background: linear-gradient(180deg, var(--secondary-color) 0%, #1a2b33 100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+/* Mobile Navigation Toggle */
+.navbar-toggler {
+    appearance: none;
+    cursor: pointer;
+    width: 3.5rem;
+    height: 2.5rem;
+    color: white;
+    position: fixed;
+    top: 0.5rem;
+    right: 1rem;
+    z-index: 1001;
+    border: 2px solid var(--accent-color);
+    border-radius: 8px;
+    background: var(--secondary-color) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28216, 151, 60, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") no-repeat center/1.75rem;
+    transition: all 0.3s ease;
+}
+
+.navbar-toggler:checked {
+    background-color: var(--accent-color);
+    transform: rotate(90deg);
+}
+
+.navbar-toggler:hover {
+    background-color: var(--accent-color);
+    border-color: var(--dominant-color);
+}
+
+/* Top row styling */
+.top-row {
+    background: linear-gradient(90deg, var(--secondary-color) 0%, #334b56 100%);
+    border-bottom: 3px solid var(--accent-color);
+    justify-content: flex-end;
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.top-row ::deep a, .top-row ::deep .btn-link {
+    white-space: nowrap;
+    margin-left: 1.5rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+}
+
+.top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
+    background-color: var(--accent-color);
+    color: white;
+    text-decoration: none;
+}
+
+.top-row ::deep a:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Content area styling */
+article.content {
+    background-color: var(--dominant-color);
+    min-height: calc(100vh - var(--header-height));
+}
+
+/* Navigation Brand */
+.navbar-brand {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-brand i {
+    margin-right: 10px;
+    color: var(--accent-color);
+    font-size: 1.5rem;
+}
+
+/* Bootstrap Icons styling */
+.bi {
+    display: inline-block;
+    position: relative;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: 0.75rem;
+    top: -1px;
+}
+
+/* Navigation Items */
+.nav-item {
+    font-size: 0.95rem;
+    padding-bottom: 0.5rem;
+    margin: 0 1rem;
+}
+
+.nav-item:first-of-type {
+    padding-top: 1rem;
+}
+
+.nav-item:last-of-type {
+    padding-bottom: 1rem;
+}
+
+.nav-item ::deep .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    line-height: 3rem;
+    width: 100%;
+    padding: 0 1.5rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.nav-item ::deep a.active {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 15px rgba(216, 151, 60, 0.3);
+}
+
+.nav-item ::deep .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: var(--accent-color);
+    transform: translateX(5px);
+}
+
+/* Navigation Scrollable Area */
+.nav-scrollable {
+    display: none;
+    height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+}
+
+.navbar-toggler:checked ~ .nav-scrollable {
+    display: block;
+}
+
+/* Desktop styles */
+@media (min-width: 641px) {
+    .page {
+        flex-direction: row;
+    }
+
+    .sidebar {
+        width: var(--sidebar-width);
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+    }
+
+    .navbar-toggler {
+        display: none;
+    }
+
+    .nav-scrollable {
+        display: block;
+        height: calc(100vh - 0rem);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--accent-color) transparent;
+    }
+
+    .nav-scrollable::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .nav-scrollable::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .nav-scrollable::-webkit-scrollbar-thumb {
+        background: var(--accent-color);
+        border-radius: 3px;
+    }
+
+    .top-row {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+
+    .top-row.auth ::deep a:first-child {
+        flex: 1;
+        text-align: right;
+        width: 0;
+    }
+
+    .top-row, article {
+        padding-left: 2rem !important;
+        padding-right: 1.5rem !important;
+    }
+}
+
+/* Mobile styles */
+@media (max-width: 640.98px) {
+    .top-row {
+        justify-content: space-between;
+        padding: 0 1rem;
+        position: relative;
+    }
+
+    .top-row ::deep a, .top-row ::deep .btn-link {
+        margin-left: 0;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+    }
+
+    .sidebar {
+        background: var(--secondary-color);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar-toggler {
+        display: block;
+    }
+
+    .nav-scrollable {
+        display: none;
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        width: 85vw;
+        max-width: 320px;
+        min-width: 280px;
+        height: calc(100vh - var(--header-height));
+        background: linear-gradient(180deg, var(--secondary-color) 0%, #1a2b33 100%);
+        z-index: 1000;
+        overflow-y: auto;
+        border-top: 3px solid var(--accent-color);
+        border-radius: 0 16px 16px 0;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+        padding-bottom: 2rem;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .navbar-toggler:checked ~ .nav-scrollable {
+        display: block;
+        transform: translateX(0);
+    }
+
+    .nav-item {
+        padding-bottom: 0.75rem;
+        padding-top: 0.75rem;
+        font-size: 1rem;
+        margin: 0 1rem;
+    }
+
+    .nav-item ::deep .nav-link {
+        height: 3.5rem;
+        line-height: 3.5rem;
+        font-size: 1rem;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .nav-item ::deep a.active {
+        background-color: var(--accent-color);
+        color: white;
+        border-color: var(--accent-color);
+    }
+
+    .nav-item ::deep .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: var(--accent-color);
+        transform: none;
+    }
+
+    article.content {
+        padding: 1rem !important;
+    }
+}
+
+/* Content improvements */
+article.content ::deep .container-fluid {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Card improvements to work better with the layout */
+article.content ::deep .card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+article.content ::deep .card-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+article.content ::deep .card-accent {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* Scrollbar styling for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #c07e2a;
+}
+
+/* Loading states and transitions */
+article.content ::deep > * {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Error UI styling */
+#blazor-error-ui {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    bottom: 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    color: white;
+    border-top: 3px solid var(--accent-color);
+}
+
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+#blazor-error-ui .dismiss:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}

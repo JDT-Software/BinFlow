@@ -1,0 +1,6 @@
+    body, .main-content, .container-fluid {
+        background-color: var(--dominant-color) !important;
+    }
+    .top-row {
+        background-color: var(--dominant-color);
+    }

@@ -1,0 +1,556 @@
+@page "/hourly-entry"
+@using ProductionTracker.Models
+@using ProductionTracker.Services
+@inject IProductionService ProductionService
+@inject IJSRuntime JSRuntime
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+<PageTitle>Bin Flow - Hourly Entry</PageTitle>
+
+
+
+<div class="production-entry-page">
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="card mb-4 shadow card-secondary">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2 text-white">
+                        <i class="bi bi-clock icon-md me-3"></i>Hourly Production Entry
+                    </h2>
+                    <p class="text-light opacity-75">Quick entry for each hour - submit when ready</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="d-flex flex-column align-items-md-end">
+                        <h4 class="mb-1 text-white">@DateTime.Now.ToString("HH:mm")</h4>
+                        <p class="mb-0 text-light opacity-75">@DateTime.Now.ToString("dddd, dd/MM/yyyy")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entry Form -->
+    <div class="card shadow">
+        <div class="card-header card-secondary">
+            <h5 class="mb-0 text-white">
+                <i class="bi bi-clipboard-data me-2"></i>New Hourly Entry
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <!-- Left Column - Basic Info -->
+                <div class="col-lg-6">
+                    <h6 class="fw-bold mb-3" style="color: var(--secondary-color);">
+                        <i class="bi bi-info-circle me-2"></i>Shift Information
+                    </h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-calendar3 me-1"></i>Date
+                            </label>
+                            <input type="date" class="form-control" value="@entryDateString" @onchange="@((e) => entryDateString = e.Value?.ToString() ?? "")" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-clock me-1"></i>Time
+                            </label>
+                            <input type="time" class="form-control" value="@entryTimeString" @onchange="@((e) => entryTimeString = e.Value?.ToString() ?? "")" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-person-badge me-1"></i>Line Manager
+                            </label>
+                            <input type="text" class="form-control" @bind="lineManager" placeholder="Enter manager name" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-shift me-1"></i>Shift
+                            </label>
+                            <select class="form-select" @bind="selectedShift">
+                                <option value="">Select Shift</option>
+                                <option value="Day">☀️ Day Shift</option>
+                                <option value="Night">🌙 Night Shift</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Production Data -->
+                <div class="col-lg-6">
+                    <h6 class="fw-bold mb-3" style="color: var(--secondary-color);">
+                        <i class="bi bi-graph-up me-2"></i>Production Data
+                    </h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-box-seam me-1"></i>Bins Tipped
+                            </label>
+                            <input type="number" class="form-control" @bind="binsTipped" 
+                                   min="0" placeholder="0 bins allowed" />
+                            <small class="text-muted">
+                                <i class="bi bi-target me-1"></i>Target: 65+ bins/hour
+                            </small>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-speedometer2 me-1"></i>Average Bin Weight (kg)
+                            </label>
+                            <input type="number" class="form-control" @bind="averageBinWeight" 
+                                   min="0" step="1" placeholder="Weight in kg" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-stopwatch me-1"></i>Downtime (minutes)
+                            </label>
+                            <input type="number" class="form-control" @bind="downTime" 
+                                   min="0" placeholder="0 = excellent" />
+                            <small class="text-muted">
+                                <i class="bi bi-check-circle me-1"></i>Target: less than 30 minutes
+                            </small>
+                        </div>
+                        <div class="col-sm-6 d-flex align-items-end">
+                            <div class="form-check w-100">
+                                <input type="checkbox" class="form-check-input" @bind="isLunchBreak" id="lunchCheck" />
+                                <label class="form-check-label fw-bold" for="lunchCheck">
+                                    <i class="bi bi-cup-hot me-2"></i>Lunch Break Hour
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-chat-text me-1"></i>Reasons / Notes
+                            </label>
+                            <textarea class="form-control" @bind="reasonsNotes" 
+                                      rows="3" placeholder="Optional notes about downtime, issues, etc."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Indicators -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h6 class="fw-bold mb-3" style="color: var(--secondary-color);">
+                        <i class="bi bi-bullseye me-2"></i>Performance Check
+                    </h6>
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card performance-card @GetBinsTargetClass()">
+                                <div class="card-body text-center">
+                                    <div class="icon-lg mb-2" style="color: var(--accent-color);">
+                                        <i class="bi bi-box-seam"></i>
+                                    </div>
+                                    <h5 class="mb-1">@binsTipped</h5>
+                                    <small class="text-muted">Bins/Hour</small>
+                                    <div class="mt-2">
+                                        @if (binsTipped >= 65)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>On Target
+                                            </span>
+                                        }
+                                        else if (binsTipped > 0)
+                                        {
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Below Target
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-hourglass me-1"></i>No Data
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card performance-card @GetDowntimeClass()">
+                                <div class="card-body text-center">
+                                    <div class="icon-lg mb-2" style="color: var(--accent-color);">
+                                        <i class="bi bi-stopwatch"></i>
+                                    </div>
+                                    <h5 class="mb-1">@downTime</h5>
+                                    <small class="text-muted">Minutes Downtime</small>
+                                    <div class="mt-2">
+                                        @if (downTime == 0)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-star me-1"></i>Excellent
+                                            </span>
+                                        }
+                                        else if (downTime <= 30)
+                                        {
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Acceptable
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle me-1"></i>Poor
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="row mt-5">
+                <div class="col-12 d-flex justify-content-center">
+                    <button type="button" class="btn btn-accent btn-lg px-5" @onclick="SaveEntry" disabled="@(!CanSave() || isSaving)">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-floppy me-2"></i>
+                            <span>Submit Entry</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Entries Today -->
+            @if (todaysEntries.Any())
+            {
+                <div class="row mt-5">
+                    <div class="col-12">
+                        <div class="card card-secondary">
+                            <div class="card-header">
+                                <h6 class="mb-0 text-white">
+                                    <i class="bi bi-calendar-check me-2"></i>Today's Entries (@todaysEntries.Count)
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-dark">
+                                        <thead>
+                                            <tr>
+                                                <th><i class="bi bi-clock me-1"></i>Time</th>
+                                                <th><i class="bi bi-person me-1"></i>Manager</th>
+                                                <th><i class="bi bi-shift me-1"></i>Shift</th>
+                                                <th><i class="bi bi-box me-1"></i>Bins</th>
+                                                <th><i class="bi bi-weight me-1"></i>Weight</th>
+                                                <th><i class="bi bi-stopwatch me-1"></i>Downtime</th>
+                                                <th><i class="bi bi-check-circle me-1"></i>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var entry in todaysEntries.OrderByDescending(e => e.Time))
+                                            {
+                                                <tr>
+                                                    <td><span class="badge badge-accent">@FormatTime(entry.Time)</span></td>
+                                                    <td class="text-light">@entry.LineManager</td>
+                                                    <td><span class="badge bg-secondary">@entry.Shift</span></td>
+                                                    <td class="fw-bold @(entry.BinsTipped >= 65 ? "text-success" : "text-warning")">@entry.BinsTipped</td>
+                                                    <td class="text-light">@entry.AverageBinWeight.ToString("N0") kg</td>
+                                                    <td>
+                                                        @if (entry.DownTime == 0)
+                                                        {
+                                                            <span class="badge bg-success">0</span>
+                                                        }
+                                                        else if (entry.DownTime <= 30)
+                                                        {
+                                                            <span class="badge bg-warning text-dark">@entry.DownTime</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-danger">@entry.DownTime</span>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (entry.IsLunchBreak)
+                                                        {
+                                                            <span class="badge bg-info">
+                                                                <i class="bi bi-cup-hot"></i>
+                                                            </span>
+                                                        }
+                                                        else if (entry.BinsTipped >= 65 && entry.DownTime <= 30)
+                                                        {
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-check-circle"></i>
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning">
+                                                                <i class="bi bi-exclamation-triangle"></i>
+                                                            </span>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Status Messages -->
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert @(statusMessage.Contains("Success") ? "alert-success" : "alert-danger") alert-dismissible fade show mt-3">
+            @if (statusMessage.Contains("Success"))
+            {
+                <i class="bi bi-check-circle me-2"></i>
+            }
+            else
+            {
+                <i class="bi bi-exclamation-triangle me-2"></i>
+            }
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="ClearStatusMessage"></button>
+        </div>
+    }
+</div>
+</div>
+
+@code {
+    // Form fields - all using string bindings for HTML inputs
+    private string entryDateString = DateTime.Today.ToString("yyyy-MM-dd");
+    private string entryTimeString = DateTime.Now.ToString("HH:mm");
+    private string lineManager = "";
+    private string selectedShift = "";
+    private int binsTipped = 0;
+    private double averageBinWeight = 0;
+    private int downTime = 0;
+    private string reasonsNotes = "";
+    private bool isLunchBreak = false;
+
+    // UI State
+    private bool isSaving = false;
+    private string statusMessage = "";
+    private List<BinTippingDisplay> todaysEntries = new();
+
+    // Helper class for display purposes
+    private class BinTippingDisplay
+    {
+        public TimeSpan Time { get; set; }
+        public int BinsTipped { get; set; }
+        public double AverageBinWeight { get; set; }
+        public int DownTime { get; set; }
+        public bool IsLunchBreak { get; set; }
+        public string ReasonForNotAchievingTarget { get; set; } = "";
+        public string LineManager { get; set; } = "";
+        public string Shift { get; set; } = "";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTodaysEntries();
+    }
+
+    private async Task LoadTodaysEntries()
+    {
+        try
+        {
+            // This would load today's hourly entries from MongoDB
+            // For now, we'll simulate with empty list
+            todaysEntries = new List<BinTippingDisplay>();
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", $"Error loading today's entries: {ex.Message}");
+        }
+    }
+
+    private async Task SaveEntry()
+    {
+        if (!CanSave()) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "=== SAVING HOURLY ENTRY ===");
+            
+            // Parse date more safely to avoid timezone issues
+            DateTime entryDate;
+            if (DateTime.TryParseExact(entryDateString, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.AssumeLocal, out entryDate))
+            {
+                // Successfully parsed with local timezone assumption
+                await JSRuntime.InvokeVoidAsync("console.log", $"📅 Successfully parsed date: {entryDate:yyyy-MM-dd}");
+            }
+            else
+            {
+                // Fallback: manual parsing to ensure no timezone conversion
+                var dateParts = entryDateString.Split('-');
+                if (dateParts.Length == 3)
+                {
+                    var year = int.Parse(dateParts[0]);
+                    var month = int.Parse(dateParts[1]);
+                    var day = int.Parse(dateParts[2]);
+                    entryDate = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Local);
+                    await JSRuntime.InvokeVoidAsync("console.log", $"📅 Manually parsed date: {entryDate:yyyy-MM-dd}");
+                }
+                else
+                {
+                    throw new FormatException($"Invalid date format: {entryDateString}");
+                }
+            }
+            
+            // Handle time parsing - HTML time input can return HH:mm or HH:mm:ss format
+            TimeOnly entryTime;
+            if (entryTimeString.Contains(':'))
+            {
+                var timeParts = entryTimeString.Split(':');
+                if (timeParts.Length >= 2)
+                {
+                    var hours = int.Parse(timeParts[0]);
+                    var minutes = int.Parse(timeParts[1]);
+                    entryTime = new TimeOnly(hours, minutes);
+                }
+                else
+                {
+                    entryTime = TimeOnly.ParseExact(entryTimeString, "HH:mm", null);
+                }
+            }
+            else
+            {
+                entryTime = TimeOnly.ParseExact(entryTimeString, "HH:mm", null);
+            }
+            
+            await JSRuntime.InvokeVoidAsync("console.log", $"📅 Selected date: {entryDateString}");
+            await JSRuntime.InvokeVoidAsync("console.log", $"📅 Parsed date: {entryDate:yyyy-MM-dd}");
+            await JSRuntime.InvokeVoidAsync("console.log", $"🕒 Selected time: {entryTimeString}");
+            await JSRuntime.InvokeVoidAsync("console.log", $"🕒 Parsed time: {entryTime}");
+            
+            var hourlyEntry = new BinTipping
+            {
+                Time = entryTime.ToTimeSpan(),
+                BinsTipped = isLunchBreak ? 0 : binsTipped,
+                AverageBinWeight = isLunchBreak ? 0 : averageBinWeight,
+                DownTime = downTime,
+                ReasonForNotAchievingTarget = reasonsNotes,
+                IsLunchBreak = isLunchBreak
+            };
+
+            // Create or find today's shift report
+            var shiftReportDto = new CreateShiftReportDto
+            {
+                Date = entryDate,
+                LineManager = lineManager,
+                Shift = selectedShift
+            };
+
+            // Get or create shift report for this date/shift/manager combination
+            var existingReports = await ProductionService.GetShiftReportsByDateRangeAsync(entryDate, entryDate);
+            var existingReport = existingReports.FirstOrDefault(r => 
+                r.LineManager == lineManager && 
+                r.Shift == selectedShift && 
+                r.Date.Date == entryDate.Date);
+
+            string shiftReportId;
+            if (existingReport != null)
+            {
+                shiftReportId = existingReport.Id;
+                await JSRuntime.InvokeVoidAsync("console.log", $"Using existing shift report: {shiftReportId}");
+            }
+            else
+            {
+                var newReport = await ProductionService.CreateShiftReportAsync(shiftReportDto);
+                shiftReportId = newReport.Id;
+                await JSRuntime.InvokeVoidAsync("console.log", $"Created new shift report: {shiftReportId}");
+            }
+
+            // Add the hourly entry
+            await ProductionService.AddBinTippingEntryAsync(shiftReportId, hourlyEntry);
+            
+            await JSRuntime.InvokeVoidAsync("console.log", "✅ Hourly entry saved successfully");
+            
+            statusMessage = "Entry saved successfully!";
+            ClearForm();
+
+            // Refresh today's entries
+            await LoadTodaysEntries();
+            var displayEntry = new BinTippingDisplay 
+            { 
+                Time = entryTime.ToTimeSpan(), 
+                BinsTipped = binsTipped, 
+                AverageBinWeight = averageBinWeight, 
+                DownTime = downTime,
+                IsLunchBreak = isLunchBreak,
+                ReasonForNotAchievingTarget = reasonsNotes,
+                LineManager = lineManager,
+                Shift = selectedShift
+            };
+            todaysEntries.Add(displayEntry);
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", $"❌ Error saving entry: {ex.Message}");
+            statusMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool CanSave()
+    {
+        return !string.IsNullOrWhiteSpace(lineManager) && 
+               !string.IsNullOrWhiteSpace(selectedShift) &&
+               !string.IsNullOrWhiteSpace(entryDateString);
+    }
+
+    private void ClearForm()
+    {
+        entryTimeString = DateTime.Now.ToString("HH:mm");
+        entryDateString = DateTime.Today.ToString("yyyy-MM-dd");
+        binsTipped = 0;
+        averageBinWeight = 0;
+        downTime = 0;
+        reasonsNotes = "";
+        isLunchBreak = false;
+        statusMessage = "";
+    }
+
+    private void ClearStatusMessage()
+    {
+        statusMessage = "";
+    }
+
+    private string GetBinsTargetClass()
+    {
+        if (binsTipped >= 65) return "border-success";
+        if (binsTipped > 0) return "border-warning";
+        return "border-secondary";
+    }
+
+    private string GetDowntimeClass()
+    {
+        if (downTime == 0) return "border-success";
+        if (downTime <= 30) return "border-warning";
+        return "border-danger";
+    }
+
+    private string FormatTime(TimeSpan time)
+    {
+        return $"{time.Hours:D2}:{time.Minutes:D2}";
+    }
+
+    public void Dispose()
+    {
+        // No timer to dispose anymore
+    }
+}

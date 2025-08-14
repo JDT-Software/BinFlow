@@ -1,0 +1,20 @@
+# Build outputs
+bin/
+obj/
+
+# User-specific
+*.user
+*.swp
+*.suo
+
+# Secrets (example override)
+appsettings.Local.json
+
+# Published artifacts
+publish/
+
+# Logs
+*.log
+
+# VS Code
+.vscode/

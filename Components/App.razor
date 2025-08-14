@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="ProductionTracker.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <!-- Splash Screen Styles (first-load only; suppressed after first successful display) -->
+    <style>
+    /* Hidden by default; only shown if html.has-splash class is applied (first load) */
+    #splash-screen { display:none; }
+    html.has-splash #splash-screen { position: fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(135deg,#000000 0%,#1a1a1a 100%); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:9999; transition:opacity .5s ease-out; }
+    html.no-splash #splash-screen { display:none !important; }
+        #splash-screen.fade-out { opacity:0; pointer-events:none; }
+        .splash-logo { width:200px; height:200px; position:relative; margin-bottom:30px; animation:logoRotate 8s ease-in-out infinite; }
+        @@keyframes logoRotate {0%,100%{transform:rotate(0deg) scale(1);}25%{transform:rotate(2deg) scale(1.05);}50%{transform:rotate(0deg) scale(1.02);}75%{transform:rotate(-2deg) scale(1.05);} }
+        .logo-shape { position:absolute; border-radius:20px; transition:all .3s ease-in-out; animation:logoShapeFloat 3s ease-in-out infinite; }
+        .logo-shape.top-left { top:0; left:0; width:90px; height:90px; background:linear-gradient(135deg,#10b981,#059669); border-radius:20px 0 20px 0; animation-delay:0s; box-shadow:0 10px 30px rgba(16,185,129,.3); }
+        .logo-shape.top-right { top:0; right:0; width:90px; height:90px; background:linear-gradient(135deg,#6b7280,#9ca3af); border-radius:0 20px 0 20px; animation-delay:.5s; box-shadow:0 10px 30px rgba(107,114,128,.2); }
+        .logo-shape.bottom-left { bottom:0; left:0; width:90px; height:90px; background:linear-gradient(135deg,#6b7280,#9ca3af); border-radius:0 20px 20px 0; animation-delay:1s; box-shadow:0 10px 30px rgba(107,114,128,.2); }
+        .logo-shape.bottom-right { bottom:0; right:0; width:90px; height:90px; background:linear-gradient(135deg,#10b981,#059669); border-radius:20px 0 0 20px; animation-delay:1.5s; box-shadow:0 10px 30px rgba(16,185,129,.3); }
+        @@keyframes logoShapeFloat {0%,100%{transform:translateY(0) scale(1);}25%{transform:translateY(-8px) scale(1.02);}50%{transform:translateY(-4px) scale(1.01);}75%{transform:translateY(-6px) scale(1.015);} }
+        .splash-text { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-size:48px; font-weight:700; color:#fff; margin-bottom:30px; letter-spacing:-2px; animation:textPulse 2s ease-in-out infinite; }
+        .splash-text .flow-text { color:#10b981; text-shadow:0 0 20px rgba(16,185,129,.5); animation:textGlow 2s ease-in-out infinite alternate; }
+        @@keyframes textPulse {0%,100%{transform:scale(1);}50%{transform:scale(1.02);} }
+        @@keyframes textGlow {0%{text-shadow:0 0 20px rgba(16,185,129,.5);}100%{text-shadow:0 0 30px rgba(16,185,129,.8),0 0 40px rgba(16,185,129,.3);} }
+        .loading-container { display:flex; flex-direction:column; align-items:center; margin-top:30px; }
+        .loading-spinner { width:50px; height:50px; border:4px solid rgba(255,255,255,.1); border-top:4px solid #10b981; border-right:4px solid #059669; border-radius:50%; animation:spinGlow 1.2s linear infinite; margin-bottom:20px; box-shadow:0 0 20px rgba(16,185,129,.3); }
+        .progress-bar { width:200px; height:4px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; margin-bottom:10px; }
+        .progress-fill { height:100%; background:linear-gradient(90deg,#10b981,#059669); border-radius:2px; width:0%; animation:progressFill 3s ease-in-out forwards; box-shadow:0 0 10px rgba(16,185,129,.5); }
+        .loading-text { color:rgba(255,255,255,.7); font-size:14px; font-weight:500; animation:loadingTextFade 1.5s ease-in-out infinite; }
+        @@keyframes spinGlow {0%{transform:rotate(0);box-shadow:0 0 20px rgba(16,185,129,.3);}50%{box-shadow:0 0 30px rgba(16,185,129,.6);}100%{transform:rotate(360deg);box-shadow:0 0 20px rgba(16,185,129,.3);} }
+        @@keyframes progressFill {0%{width:0;}30%{width:45%;}60%{width:70%;}90%{width:95%;}100%{width:100%;} }
+        @@keyframes loadingTextFade {0%,100%{opacity:.7;}50%{opacity:1;} }
+        .fade-in-up { animation:fadeInUp .8s ease-out; }
+        @@keyframes fadeInUp {from{opacity:0; transform:translateY(30px);}to{opacity:1; transform:translateY(0);} }
+        .app-loading #app-root { visibility:hidden; }
+    </style>
+    <script>
+        // Early gating: show only once per browser tab session (sessionStorage)
+        (function(){
+            try {
+                // Clean up legacy persistent key if it exists so session logic takes over
+                if(localStorage.getItem('binflowSplashShown')) {
+                    localStorage.removeItem('binflowSplashShown');
+                }
+                if(!sessionStorage.getItem('binflowSplashShown')) {
+                    document.documentElement.classList.add('has-splash');
+                } else {
+                    document.documentElement.classList.add('no-splash');
+                }
+            } catch(e) { /* ignore */ }
+        })();
+    </script>
+    <HeadOutlet />
+</head>
+
+<body>
+    <!-- Splash (in DOM always but only visible on very first load due to html.has-splash) -->
+    <div id="splash-screen" aria-hidden="true">
+        <div class="splash-logo fade-in-up">
+            <div class="logo-shape top-left"></div>
+            <div class="logo-shape top-right"></div>
+            <div class="logo-shape bottom-left"></div>
+            <div class="logo-shape bottom-right"></div>
+        </div>
+        <div class="splash-text fade-in-up">Bin<span class="flow-text">Flow</span></div>
+        <div class="loading-container fade-in-up">
+            <div class="loading-spinner"></div>
+            <div class="progress-bar"><div class="progress-fill"></div></div>
+            <div class="loading-text">Initializing BinFlow...</div>
+        </div>
+    </div>
+
+    <!-- App Root -->
+    <div id="app-root">
+        <Routes />
+    </div>
+
+    <script src="_framework/blazor.web.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', function(){
+            // Only run splash logic if first load
+            if(!document.documentElement.classList.contains('has-splash')) return; 
+            document.body.classList.add('app-loading');
+            const messages=['Initializing BinFlow...','Loading your workspace...','Preparing components...','Almost ready...','Welcome to BinFlow!'];
+            let idx=0; const txtEl=document.querySelector('#splash-screen .loading-text');
+            const msgIv=setInterval(()=>{ if(idx < messages.length-1){ idx++; if(txtEl) txtEl.textContent=messages[idx];}},800);
+            function hide(){ clearInterval(msgIv); const splash=document.getElementById('splash-screen'); if(!splash) return; if(txtEl) txtEl.textContent=messages.at(-1); setTimeout(()=>{ splash.classList.add('fade-out'); document.body.classList.remove('app-loading'); setTimeout(()=>{ splash.style.display='none'; try{sessionStorage.setItem('binflowSplashShown','true'); document.documentElement.classList.remove('has-splash'); document.documentElement.classList.add('no-splash');}catch(e){} },500); },300); }
+            function scheduleHide(){ setTimeout(hide,1500); }
+            if(window.Blazor){ scheduleHide(); }
+            else { const started=()=>{ scheduleHide(); window.removeEventListener('blazor:started', started); }; window.addEventListener('blazor:started', started); setTimeout(hide,6000); }
+        });
+    </script>
+</body>
+
+</html>

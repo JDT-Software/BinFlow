@@ -1,0 +1,117 @@
+/* Bin Flow Global Styles */
+:root {
+    --dominant-color: #D8C99B;
+    --secondary-color: #273E47;
+    --accent-color: #D8973C;
+}
+
+body {
+    background-color: var(--dominant-color);
+}
+
+.hero-gradient {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #1a2b33 100%);
+}
+
+.card-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.card-accent {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+/* Accent button that works with existing focus styles */
+.btn-accent {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.btn-accent:hover {
+    background-color: #c07e2a;
+    border-color: #c07e2a;
+    color: white;
+}
+
+.btn-accent:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem var(--accent-color);
+}
+
+/* Stats cards with gradients */
+.stats-card-1 {
+    background: linear-gradient(135deg, var(--accent-color) 0%, #e6a54a 100%);
+}
+
+.stats-card-2 {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #334b56 100%);
+}
+
+.stats-card-3 {
+    background: linear-gradient(135deg, #8b4513 0%, #a0522d 100%);
+}
+
+.stats-card-4 {
+    background: linear-gradient(135deg, #2c5530 0%, #3e7b3e 100%);
+}
+
+/* Icon sizing */
+.icon-lg {
+    font-size: 2.5rem;
+}
+
+.icon-xl {
+    font-size: 4rem;
+}
+
+/* Progress bar customization */
+.progress-accent .progress-bar {
+    background-color: var(--accent-color);
+}
+
+/* Badge customizations */
+.badge-accent {
+    background-color: #0a2a43; /* navy */
+    color: #ffffff;
+}
+
+/* Table improvements for dark theme */
+.table-dark th {
+    border-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.table-dark td {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+    .icon-xl {
+        font-size: 3rem;
+    }
+    
+    .icon-lg {
+        font-size: 2rem;
+    }
+    
+    .display-4 {
+        font-size: 2.5rem;
+    }
+}
+
+/* Enhanced card hover effects */
+.card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease-in-out;
+}
+
+/* Focus improvements for accessibility */
+.btn:focus,
+.card:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
