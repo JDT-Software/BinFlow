@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using MongoDB.Bson;
 using ProductionTracker.Models;
 using Microsoft.Extensions.Options;
+using System.Security.Authentication;
 
 namespace ProductionTracker.Services
 {
@@ -22,10 +23,44 @@ namespace ProductionTracker.Services
 
         public ProductionService(IOptions<MongoDbSettings> settings)
         {
-            var client = new MongoClient(settings.Value.ConnectionString);
-            var database = client.GetDatabase(settings.Value.DatabaseName);
-            _shiftReports = database.GetCollection<ShiftReport>(settings.Value.ShiftReportsCollectionName);
-            _hourlyEntries = database.GetCollection<HourlyEntry>(settings.Value.HourlyEntriesCollectionName);
+            var cfg = settings.Value;
+            if (string.IsNullOrWhiteSpace(cfg.ConnectionString))
+            {
+                Console.WriteLine("⚠️ Mongo connection string missing. Set env var MongoDbSettings__ConnectionString.");
+                throw new InvalidOperationException("Mongo connection string not configured.");
+            }
+
+            MongoClient client;
+            try
+            {
+                var url = new MongoUrl(cfg.ConnectionString);
+                var cs = MongoClientSettings.FromUrl(url);
+                // Explicit TLS 1.2 (Atlas requires >= TLS1.2) to avoid negotiation edge cases
+                cs.SslSettings = new SslSettings { EnabledSslProtocols = SslProtocols.Tls12 };
+                // Tighter timeouts with clearer logs
+                cs.ServerSelectionTimeout = TimeSpan.FromSeconds(15);
+                cs.ConnectTimeout = TimeSpan.FromSeconds(15);
+                cs.SocketTimeout = TimeSpan.FromSeconds(30);
+                client = new MongoClient(cs);
+                Console.WriteLine($"✅ Mongo configured. Host(s): {string.Join(',', url.Servers.Select(s => s.Host))}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Mongo configuration error: {ex.Message}\n{ex}");
+                throw;
+            }
+
+            try
+            {
+                var database = client.GetDatabase(cfg.DatabaseName);
+                _shiftReports = database.GetCollection<ShiftReport>(cfg.ShiftReportsCollectionName);
+                _hourlyEntries = database.GetCollection<HourlyEntry>(cfg.HourlyEntriesCollectionName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Mongo initialization failure: {ex.Message}");
+                throw;
+            }
         }
 
         // Existing methods from your current implementation
