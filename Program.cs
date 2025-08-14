@@ -1,6 +1,8 @@
 using ProductionTracker.Components;
 using ProductionTracker.Services;
 using MudBlazor.Services;
+using Microsoft.AspNetCore.DataProtection;
+using System.IO;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,6 +42,20 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 var app = builder.Build();
+
+// Data Protection key persistence (prevents antiforgery token invalidation on restarts)
+try
+{
+    var keyPath = Environment.GetEnvironmentVariable("DP_KEYS_PATH") ?? "/app/dpkeys"; // container path
+    Directory.CreateDirectory(keyPath);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
+        .SetApplicationName("BinFlow");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"⚠️ DataProtection configuration failed: {ex.Message}");
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
