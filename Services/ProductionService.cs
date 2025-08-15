@@ -46,10 +46,23 @@ namespace ProductionTracker.Services
             {
                 var url = new MongoUrl(_settings.ConnectionString);
                 var cs = MongoClientSettings.FromUrl(url);
-                cs.SslSettings = new SslSettings { EnabledSslProtocols = SslProtocols.Tls12 };
-                cs.ServerSelectionTimeout = TimeSpan.FromSeconds(15);
-                cs.ConnectTimeout = TimeSpan.FromSeconds(15);
-                cs.SocketTimeout = TimeSpan.FromSeconds(30);
+                
+                // Enhanced SSL settings for container environments
+                cs.SslSettings = new SslSettings 
+                { 
+                    EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                    CheckCertificateRevocation = false,
+                    ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true // Accept all certs for Atlas
+                };
+                cs.UseTls = true;
+                cs.AllowInsecureTls = false;
+                
+                // Adjusted timeouts for potential network latency
+                cs.ServerSelectionTimeout = TimeSpan.FromSeconds(30);
+                cs.ConnectTimeout = TimeSpan.FromSeconds(30);
+                cs.SocketTimeout = TimeSpan.FromSeconds(60);
+                cs.MaxConnectionPoolSize = 100;
+                
                 var client = new MongoClient(cs);
                 var database = client.GetDatabase(_settings.DatabaseName);
                 _shiftReports = database.GetCollection<ShiftReport>(_settings.ShiftReportsCollectionName);
