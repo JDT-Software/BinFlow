@@ -18,55 +18,64 @@ namespace ProductionTracker.Services
     // MongoDB service implementation
     public class ProductionService : IProductionService
     {
-        private readonly IMongoCollection<ShiftReport> _shiftReports;
-        private readonly IMongoCollection<HourlyEntry> _hourlyEntries;
+    private IMongoCollection<ShiftReport>? _shiftReports;
+    private IMongoCollection<HourlyEntry>? _hourlyEntries;
+    private bool _initAttempted;
+    private bool _initSucceeded;
+    private string _initError = string.Empty;
 
         public ProductionService(IOptions<MongoDbSettings> settings)
         {
-            var cfg = settings.Value;
-            if (string.IsNullOrWhiteSpace(cfg.ConnectionString))
-            {
-                Console.WriteLine("⚠️ Mongo connection string missing. Set env var MongoDbSettings__ConnectionString.");
-                throw new InvalidOperationException("Mongo connection string not configured.");
-            }
+            _settings = settings.Value;
+        }
 
-            MongoClient client;
+        private readonly MongoDbSettings _settings;
+
+        private void TryInitialize()
+        {
+            if (_initAttempted) return;
+            _initAttempted = true;
+
+            if (string.IsNullOrWhiteSpace(_settings.ConnectionString))
+            {
+                _initError = "Mongo connection string missing (MongoDbSettings__ConnectionString). Running in degraded mode.";
+                Console.WriteLine("⚠️ " + _initError);
+                return;
+            }
             try
             {
-                var url = new MongoUrl(cfg.ConnectionString);
+                var url = new MongoUrl(_settings.ConnectionString);
                 var cs = MongoClientSettings.FromUrl(url);
-                // Explicit TLS 1.2 (Atlas requires >= TLS1.2) to avoid negotiation edge cases
                 cs.SslSettings = new SslSettings { EnabledSslProtocols = SslProtocols.Tls12 };
-                // Tighter timeouts with clearer logs
                 cs.ServerSelectionTimeout = TimeSpan.FromSeconds(15);
                 cs.ConnectTimeout = TimeSpan.FromSeconds(15);
                 cs.SocketTimeout = TimeSpan.FromSeconds(30);
-                client = new MongoClient(cs);
-                Console.WriteLine($"✅ Mongo configured. Host(s): {string.Join(',', url.Servers.Select(s => s.Host))}");
+                var client = new MongoClient(cs);
+                var database = client.GetDatabase(_settings.DatabaseName);
+                _shiftReports = database.GetCollection<ShiftReport>(_settings.ShiftReportsCollectionName);
+                _hourlyEntries = database.GetCollection<HourlyEntry>(_settings.HourlyEntriesCollectionName);
+                _initSucceeded = true;
+                Console.WriteLine($"✅ Mongo initialized (lazy). Host(s): {string.Join(',', url.Servers.Select(s => s.Host))}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Mongo configuration error: {ex.Message}\n{ex}");
-                throw;
+                _initError = ex.Message;
+                Console.WriteLine($"❌ Mongo lazy init failed: {ex.Message}\n{ex}");
             }
+        }
 
-            try
-            {
-                var database = client.GetDatabase(cfg.DatabaseName);
-                _shiftReports = database.GetCollection<ShiftReport>(cfg.ShiftReportsCollectionName);
-                _hourlyEntries = database.GetCollection<HourlyEntry>(cfg.HourlyEntriesCollectionName);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Mongo initialization failure: {ex.Message}");
-                throw;
-            }
+        private bool EnsureReady()
+        {
+            if (!_initAttempted) TryInitialize();
+            if (_initSucceeded) return true;
+            return false;
         }
 
         // Existing methods from your current implementation
         public async Task<List<ShiftReport>> GetAllShiftReportsAsync()
         {
-            return await _shiftReports
+            if (!EnsureReady()) return new List<ShiftReport>();
+            return await _shiftReports!
                 .Find(_ => true)
                 .Sort(Builders<ShiftReport>.Sort.Descending(x => x.Date))
                 .ToListAsync();
@@ -92,7 +101,8 @@ namespace ProductionTracker.Services
                 .Include(x => x.AverageWeight)
                 .Include(x => x.TotalDowntime);
 
-            var results = await _shiftReports
+            if (!EnsureReady()) return new List<ShiftSummary>();
+            var results = await _shiftReports!
                 .Find(filter)
                 .Project(projection)
                 .Sort(Builders<ShiftReport>.Sort.Descending(x => x.Date))
@@ -113,14 +123,16 @@ namespace ProductionTracker.Services
 
         public async Task<ShiftReport?> GetShiftReportByIdAsync(string id)
         {
-            return await _shiftReports
+            if (!EnsureReady()) return null;
+            return await _shiftReports!
                 .Find(x => x.Id == id)
                 .FirstOrDefaultAsync();
         }
 
         public async Task<List<ShiftReport>> GetShiftReportsByDateRangeAsync(DateTime fromDate, DateTime toDate)
         {
-            return await _shiftReports
+            if (!EnsureReady()) return new List<ShiftReport>();
+            return await _shiftReports!
                 .Find(x => x.Date >= fromDate && x.Date <= toDate)
                 .Sort(Builders<ShiftReport>.Sort.Descending(x => x.Date))
                 .ToListAsync();
@@ -128,7 +140,8 @@ namespace ProductionTracker.Services
 
         public async Task<List<ShiftReport>> GetShiftReportsByLineManagerAsync(string lineManager)
         {
-            return await _shiftReports
+            if (!EnsureReady()) return new List<ShiftReport>();
+            return await _shiftReports!
                 .Find(x => x.LineManager == lineManager)
                 .Sort(Builders<ShiftReport>.Sort.Descending(x => x.Date))
                 .ToListAsync();
@@ -156,7 +169,8 @@ namespace ProductionTracker.Services
 
             Console.WriteLine($"📅 Backend: About to save date: {shiftReport.Date:yyyy-MM-dd HH:mm:ss} (Kind: {shiftReport.Date.Kind})");
 
-            await _shiftReports.InsertOneAsync(shiftReport);
+            if (!EnsureReady()) return shiftReport; // no-op degraded
+            await _shiftReports!.InsertOneAsync(shiftReport);
             
             // Immediately read back what was saved to see if MongoDB converted it
             var savedReport = await GetShiftReportByIdAsync(shiftReport.Id);
@@ -179,7 +193,8 @@ namespace ProductionTracker.Services
             // Recalculate totals
             RecalculateTotals(shiftReport);
 
-            var result = await _shiftReports.ReplaceOneAsync(x => x.Id == id, shiftReport);
+            if (!EnsureReady()) return false;
+            var result = await _shiftReports!.ReplaceOneAsync(x => x.Id == id, shiftReport);
             
             Console.WriteLine($"📅 Backend: Update result - Modified count: {result.ModifiedCount}");
             
@@ -188,7 +203,8 @@ namespace ProductionTracker.Services
 
         public async Task<bool> DeleteShiftReportAsync(string id)
         {
-            var result = await _shiftReports.DeleteOneAsync(x => x.Id == id);
+            if (!EnsureReady()) return false;
+            var result = await _shiftReports!.DeleteOneAsync(x => x.Id == id);
             return result.DeletedCount > 0;
         }
 
@@ -225,7 +241,8 @@ namespace ProductionTracker.Services
                 })
             };
 
-            var results = await _shiftReports.Aggregate<BsonDocument>(pipeline).ToListAsync();
+            if (!EnsureReady()) return new List<ProductionMetrics>();
+            var results = await _shiftReports!.Aggregate<BsonDocument>(pipeline).ToListAsync();
             
             return results.Select(doc => new ProductionMetrics
             {
@@ -247,7 +264,8 @@ namespace ProductionTracker.Services
                 .Push(x => x.BinTippings, binTipping)
                 .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _shiftReports.UpdateOneAsync(x => x.Id == shiftReportId, update);
+            if (!EnsureReady()) return false;
+            var result = await _shiftReports!.UpdateOneAsync(x => x.Id == shiftReportId, update);
             
             if (result.ModifiedCount > 0)
             {
@@ -275,7 +293,8 @@ namespace ProductionTracker.Services
                 .Set(x => x.BinTippings[entryIndex], binTipping)
                 .Set(x => x.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _shiftReports.UpdateOneAsync(x => x.Id == shiftReportId, update);
+            if (!EnsureReady()) return false;
+            var result = await _shiftReports!.UpdateOneAsync(x => x.Id == shiftReportId, update);
 
             if (result.ModifiedCount > 0)
             {
@@ -318,19 +337,22 @@ namespace ProductionTracker.Services
         public async Task<string> CreateHourlyEntryAsync(HourlyEntry entry)
         {
             entry.CreatedAt = DateTime.UtcNow;
-            await _hourlyEntries.InsertOneAsync(entry);
+            if (!EnsureReady()) return entry.Id; // degraded
+            await _hourlyEntries!.InsertOneAsync(entry);
             return entry.Id;
         }
 
         public async Task<bool> UpdateHourlyEntryAsync(string id, HourlyEntry entry)
         {
-            var result = await _hourlyEntries.ReplaceOneAsync(e => e.Id == id, entry);
+            if (!EnsureReady()) return false;
+            var result = await _hourlyEntries!.ReplaceOneAsync(e => e.Id == id, entry);
             return result.ModifiedCount > 0;
         }
 
         public async Task<bool> DeleteHourlyEntryAsync(string id)
         {
-            var result = await _hourlyEntries.DeleteOneAsync(e => e.Id == id);
+            if (!EnsureReady()) return false;
+            var result = await _hourlyEntries!.DeleteOneAsync(e => e.Id == id);
             return result.DeletedCount > 0;
         }
 
