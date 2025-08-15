@@ -44,24 +44,21 @@ namespace ProductionTracker.Services
             }
             try
             {
-                var url = new MongoUrl(_settings.ConnectionString);
+                // Add SSL compatibility parameters directly to connection string
+                var connectionString = _settings.ConnectionString;
+                if (!connectionString.Contains("tlsAllowInvalidHostnames"))
+                {
+                    var separator = connectionString.Contains("?") ? "&" : "?";
+                    connectionString += $"{separator}tlsAllowInvalidHostnames=true&tlsAllowInvalidCertificates=true&ssl=true&tlsVersion=1.2";
+                }
+                
+                var url = new MongoUrl(connectionString);
                 var cs = MongoClientSettings.FromUrl(url);
                 
-                // Enhanced SSL settings for container environments
-                cs.SslSettings = new SslSettings 
-                { 
-                    EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
-                    CheckCertificateRevocation = false,
-                    ServerCertificateValidationCallback = (sender, certificate, chain, errors) => true // Accept all certs for Atlas
-                };
-                cs.UseTls = true;
-                cs.AllowInsecureTls = false;
-                
-                // Adjusted timeouts for potential network latency
+                // Minimal SSL override - let connection string handle most settings
                 cs.ServerSelectionTimeout = TimeSpan.FromSeconds(30);
                 cs.ConnectTimeout = TimeSpan.FromSeconds(30);
                 cs.SocketTimeout = TimeSpan.FromSeconds(60);
-                cs.MaxConnectionPoolSize = 100;
                 
                 var client = new MongoClient(cs);
                 var database = client.GetDatabase(_settings.DatabaseName);
